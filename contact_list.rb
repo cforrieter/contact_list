@@ -51,7 +51,7 @@ class Application
           all_phone_numbers << " #{label}: #{phone_number}"
         end
       end
-      Contact.create(@@contact_list_array.length, fullname, email, all_phone_numbers)
+      puts "Contact created with ID #{Contact.create(@@contact_list_array.length, fullname, email, all_phone_numbers)}"
     when 'list'
       puts "ID\tName(Email)"
       puts Contact.all
