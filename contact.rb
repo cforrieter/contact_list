@@ -18,7 +18,7 @@ class Contact
   def to_a
     [@id, @name, @email, @phone_numbers]
   end
- 
+  
   ## Class Methods
   class << self
     def create(name, email, phone_numbers)
@@ -29,16 +29,10 @@ class Contact
       ContactDatabase.save(new_contact.to_a)
       return id
     end
- 
+  
     def find(term)
       # TODO: Will find and return contacts that contain the term in the first name, last name or email
-      search_results = []
-      Application.contact_list_array.each do |contact|
-        if contact.name.match(term) || contact.email.match(term)
-          search_results << contact
-        end
-      end
-      return search_results
+      Application.contact_list_array.select { |contact| contact.name.match(term) || contact.email.match(term) }
     end
 
     def exists?(email)
@@ -49,7 +43,7 @@ class Contact
       end
       return false
     end
- 
+  
     def all
       # TODO: Return the list of contacts, as is
       Application.contact_list_array
@@ -57,9 +51,7 @@ class Contact
     
     def show(id_to_search)
       # TODO: Show a contact, based on ID
-      Application.contact_list_array.each do |contact|
-        return contact if contact.id == id_to_search
-      end
+      Application.contact_list_array.detect { |contact| contact.id == id_to_search }
     end
     
   end
