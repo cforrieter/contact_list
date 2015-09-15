@@ -1,59 +1,98 @@
+require 'pg'
+require 'pry'
+
 class Contact
  
-  attr_accessor :name, :email, :id, :phone_numbers
+  attr_accessor :first_name, :last_name, :email, :phone_numbers, :id
 
-  def initialize(id, name, email, phone_numbers)
-    # TODO: assign local variables to instance variables
+  def initialize(first_name, last_name, email, phone_numbers, id = nil)
     @id = id
-    @name = name
+    @first_name = first_name
+    @last_name = last_name
     @email = email
     @phone_numbers = phone_numbers
   end
- 
-  def to_s
-    # TODO: return string representation of Contact
-    "#{self.id}:\t#{self.name}(#{self.email})#{self.phone_numbers}"
+
+  def save
+    if self.id
+      Contact.connection.exec("UPDATE contacts SET firstname = '#{first_name}', lastname = '#{last_name}', email = '#{email}' WHERE id = '#{id}';")
+    else
+      self.id = Contact.connection.exec("INSERT INTO contacts (firstname, lastname, email) VALUES ('#{first_name}', '#{last_name}', '#{email}') RETURNING id;")[0]['id'].to_i
+      phone_numbers.each do |label, number|
+        Contact.connection.exec("INSERT INTO phone_numbers (contact_id, phone_number, label) VALUES ('#{id}', '#{number}', '#{label}');")
+      end
+    end
   end
 
-  def to_a
-    [@id, @name, @email, @phone_numbers]
+  def destroy
+    Contact.connection.exec("DELETE FROM contacts WHERE id = '#{id}';")
+  end
+ 
+  def to_s
+    # return string representation of Contact
+    "#{self.id}:\t#{self.first_name} #{self.last_name}(#{self.email}) #{self.phone_numbers.join(': ')}"
   end
   
   ## Class Methods
   class << self
-    def create(name, email, phone_numbers)
-      # TODO: Will initialize a contact as well as add it to the list of contacts
-      id = Application.contact_list_array.length
-      new_contact = Contact.new(id, name, email, phone_numbers)
-      Application.contact_list_array << new_contact
-      ContactDatabase.save(new_contact.to_a)
-      return id
+    def connection
+      PG.connect(
+        host: 'localhost',
+        dbname: 'contact_list',
+        user: 'development',
+        password: 'development'
+      )
     end
   
-    def find(term)
-      # TODO: Will find and return contacts that contain the term in the first name, last name or email
-      Application.contact_list_array.select { |contact| contact.name.match(term) || contact.email.match(term) }
+    def find(id)
+      #A class method to SELECT a contact row from the database by id and return a Contact instance that represents ("maps to") that row.
+      convert_to_contact(connection.exec("SELECT * FROM contacts where id = '#{id}'"))
+        
+    end
+
+    def find_all_by_firstname(name)
+      convert_all_to_contacts(connection.exec("SELECT * FROM contacts where firstname = '#{name}'"))
+    end
+
+    def find_all_by_lastname(name)
+      convert_all_to_contacts(connection.exec("SELECT * FROM contacts where lastname = '#{name}'"))
+    end
+
+    def find_by_email(email)
+      convert_to_contact(connection.exec("SELECT * FROM contacts where email = '#{email}'"))
     end
 
     def exists?(email)
-      Application.contact_list_array.each do |contact|
-        if contact.email == email
-          return true
-        end
-      end
-      return false
+      connection.exec("SELECT * FROM contacts where email = '#{email}'").cmd_tuples >= 1
     end
   
     def all
       # TODO: Return the list of contacts, as is
-      Application.contact_list_array
+      convert_all_to_contacts(connection.exec("SELECT * FROM contacts ORDER BY id"))
     end
-    
-    def show(id_to_search)
-      # TODO: Show a contact, based on ID
-      Application.contact_list_array.detect { |contact| contact.id == id_to_search }
+
+    def get_phone_numbers(id)
+      phone_numbers = []
+      connection.exec("SELECT * FROM phone_numbers WHERE contact_id = '#{id}'").each do |row|
+        phone_numbers << [row['label'], row['phone_number']]
+      end
+      phone_numbers
     end
-    
+
+    def convert_to_contact(pg_result)
+      pg_result.each do |row|
+        return Contact.new(row['firstname'], row['lastname'], row['email'], [], row['id'])
+      end
+      nil
+    end
+
+    def convert_all_to_contacts(pg_result)
+      contacts = []
+      pg_result.each do |row|
+        contacts << Contact.new(row['firstname'], row['lastname'], row['email'], get_phone_numbers(row['id']), row['id'])
+      end
+      contacts
+    end
   end
  
 end

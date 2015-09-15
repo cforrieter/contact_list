@@ -1,37 +1,48 @@
 #!/usr/bin/ruby
 require 'pry'
-require '/vagrant/Ruby/W2D1/contact_list/contact'
-require '/vagrant/Ruby/W2D1/contact_list/contact_database'
-require '/vagrant/Ruby/W2D1/contact_list/application_help'
-require '/vagrant/Ruby/W2D1/contact_list/application_new'
+require '/vagrant/Ruby/W3D2/contact_list/contact'
+require '/vagrant/Ruby/W3D2/contact_list/contact_database'
+require '/vagrant/Ruby/W3D2/contact_list/application_help'
+require '/vagrant/Ruby/W3D2/contact_list/application_new'
 
 # TODO: Implement command line interaction
 # This should be the only file where you use puts and gets
 class Application
 
-  def self.contact_list_array
-    @@contact_list_array
-  end
-
-  def initialize
-    @@contact_list_array = ContactDatabase.load
+  def get_input(message)
+    puts message
+    return STDIN.gets.chomp
   end
 
   def run
-    case ARGV[0]
-    when 'help'
-      puts ApplicationHelp.new.run
-    when 'new'
-      puts ApplicationNew.new.run
-    when 'list'
-      puts "ID\tName(Email)"
-      puts Contact.all
-      puts '---'
-      puts "#{@@contact_list_array.length} records total"
-    when 'show'
-      puts Contact.show(ARGV[1])
-    when 'find'
-      puts Contact.find(ARGV[1])
+    loop do
+      puts "Enter a command:"
+      command, arg = gets.chomp.split(' ')
+      case command
+      when 'help'
+        puts ApplicationHelp.new.run
+      when 'new'
+        puts ApplicationNew.new.run
+      when 'list'
+        puts Contact.all
+      when 'update'
+        result = Contact.find(arg)
+
+        puts "Enter first name:"
+        result.first_name = gets.chomp
+        puts "Enter last name:"
+        result.last_name = gets.chomp
+        puts "Enter email:"
+        result.email = gets.chomp
+        
+        result.save
+      when 'show'
+        puts Contact.find(arg)
+      when 'find'
+        puts Contact.find(arg)
+      when 'quit'
+        exit
+      end
     end
   end
   
